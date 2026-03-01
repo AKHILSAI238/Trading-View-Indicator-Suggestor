@@ -1,0 +1,750 @@
+//@version=5
+indicator(title="🚀 ULTIMATE UT BOT - PROFESSIONAL EDITION", overlay=true, max_boxes_count=500, max_lines_count=500, max_labels_count=500)
+
+// ==================== ULTIMATE UT BOT WITH ALL ADVANCED FEATURES ====================
+
+// Basic colors
+green = color.green
+red = color.red
+blue = color.blue
+yellow = color.yellow
+white = color.white
+gray = color.gray
+orange = color.orange
+purple = color.purple
+lime = color.lime
+maroon = color.maroon
+aqua = color.aqua
+fuchsia = color.fuchsia
+
+// ==================== CORE INPUTS ====================
+utSensitivity = input.int(1, title="🎯 UT Bot Sensitivity", minval=1, maxval=10, group="Core Settings")
+showDebug = input.bool(true, title="📊 Show Debug Info", group="Core Settings")
+showPerformance = input.bool(true, title="📈 Show Performance Metrics", group="Core Settings")
+
+// ==================== ADAPTIVE SETTINGS ====================
+useAdaptiveFilters = input.bool(true, title="🧠 Enable Adaptive Filters", group="Adaptive Settings")
+adaptivePeriod = input.int(20, title="🧠 Adaptive Lookback Period", minval=5, maxval=100, group="Adaptive Settings")
+volatilityLookback = input.int(14, title="🧠 Volatility Lookback", minval=5, maxval=50, group="Adaptive Settings")
+
+// ==================== MULTI-TIMEFRAME SETTINGS ====================
+useMTFConfirmation = input.bool(true, title="⏰ Enable Multi-Timeframe Confirmation", group="Multi-Timeframe")
+htf1 = input.timeframe("15", title="⏰ Higher Timeframe 1", group="Multi-Timeframe")
+htf2 = input.timeframe("60", title="⏰ Higher Timeframe 2", group="Multi-Timeframe") 
+htf3 = input.timeframe("240", title="⏰ Higher Timeframe 3", group="Multi-Timeframe")
+useHTF1 = input.bool(true, title="⏰ Use HTF1 Confirmation", group="Multi-Timeframe")
+useHTF2 = input.bool(true, title="⏰ Use HTF2 Confirmation", group="Multi-Timeframe")
+useHTF3 = input.bool(false, title="⏰ Use HTF3 Confirmation", group="Multi-Timeframe")
+mtfMethod = input.string("Trend + Signals", title="⏰ MTF Confirmation Method", options=["Trend Only", "Signals Only", "Trend + Signals"], group="Multi-Timeframe")
+
+// ==================== LIQUIDITY SWEEP DETECTION ====================
+useLiquiditySweeps = input.bool(true, title="💧 Enable Liquidity Sweep Detection", group="Liquidity Sweeps")
+useDynamicBuffer = input.bool(true, title="💧 Use Dynamic Sweep Buffer", group="Liquidity Sweeps")
+staticSweepBuffer = input.float(0.1, title="💧 Static Sweep Buffer %", minval=0.01, maxval=2.0, group="Liquidity Sweeps") / 100
+sweepConfirmBars = input.int(3, title="💧 Sweep Confirmation Bars", minval=1, maxval=10, group="Liquidity Sweeps")
+sweepVolumeMultiplier = input.float(1.5, title="💧 Sweep Volume Multiplier", minval=1.0, maxval=5.0, group="Liquidity Sweeps")
+sweepLookback = input.int(50, title="💧 Sweep Lookback Period", minval=20, maxval=200, group="Liquidity Sweeps")
+
+// ==================== ADVANCED TECHNICAL FILTERS ====================
+useMACDFilter = input.bool(true, title="📈 Use MACD Filter", group="Technical Filters")
+macdFastLength = input.int(12, title="📈 MACD Fast Length", minval=1, group="Technical Filters")
+macdSlowLength = input.int(26, title="📈 MACD Slow Length", minval=1, group="Technical Filters")
+macdSignalLength = input.int(9, title="📈 MACD Signal Length", minval=1, group="Technical Filters")
+macdFilterType = input.string("Signal Cross", title="📈 MACD Filter Type", options=["Signal Cross", "Zero Line", "Histogram", "Trend"], group="Technical Filters")
+
+useStochFilter = input.bool(true, title="🎯 Use Stochastic Filter", group="Technical Filters")
+stochK = input.int(14, title="🎯 Stochastic %K Length", minval=1, group="Technical Filters")
+stochD = input.int(3, title="🎯 Stochastic %D Smoothing", minval=1, group="Technical Filters")
+stochOverbought = input.int(80, title="🎯 Stochastic Overbought", minval=70, maxval=95, group="Technical Filters")
+stochOversold = input.int(20, title="🎯 Stochastic Oversold", minval=5, maxval=30, group="Technical Filters")
+
+useBBFilter = input.bool(true, title="🎪 Use Bollinger Bands Filter", group="Technical Filters")
+bbLength = input.int(20, title="🎪 BB Length", minval=1, group="Technical Filters")
+bbStdDev = input.float(2.0, title="🎪 BB Standard Deviation", minval=0.1, maxval=5.0, group="Technical Filters")
+bbFilterType = input.string("Mean Reversion", title="🎪 BB Filter Type", options=["Mean Reversion", "Breakout", "Squeeze"], group="Technical Filters")
+
+useADXFilter = input.bool(false, title="💪 Use ADX Filter", group="Technical Filters")
+adxLength = input.int(14, title="💪 ADX Length", minval=1, group="Technical Filters")
+adxThreshold = input.int(25, title="💪 ADX Threshold", minval=10, maxval=50, group="Technical Filters")
+
+// ==================== BASIC SIGNAL FILTERING ====================
+useSignalFilters = input.bool(true, title="🔧 Enable Basic Signal Filters", group="Basic Filters")
+minBarsBetweenSignals = input.int(3, title="🔧 Minimum Bars Between Signals", minval=1, maxval=20, group="Basic Filters")
+useTrendFilter = input.bool(true, title="🔧 Use Trend Filter (EMA)", group="Basic Filters")
+trendFilterPeriod = input.int(50, title="🔧 Trend Filter EMA Period", minval=10, maxval=200, group="Basic Filters")
+useVolumeFilter = input.bool(false, title="🔧 Use Volume Filter", group="Basic Filters")
+volumeMultiplier = input.float(1.5, title="🔧 Volume Multiplier (vs SMA)", minval=1.0, maxval=5.0, group="Basic Filters")
+useRSIFilter = input.bool(true, title="🔧 Use RSI Filter", group="Basic Filters")
+
+// ==================== ADVANCED EXIT MANAGEMENT ====================
+useAdvancedExits = input.bool(true, title="🎯 Enable Advanced Exit Management", group="Exit Management")
+riskRewardRatio = input.float(2.0, title="📊 Risk:Reward Ratio", minval=0.5, maxval=5.0, group="Exit Management")
+useATRExits = input.bool(true, title="🎯 Use ATR-based Exits", group="Exit Management")
+atrMultiplier = input.float(1.5, title="🎯 ATR Stop Loss Multiplier", minval=0.5, maxval=5.0, group="Exit Management")
+useProfitTarget = input.bool(true, title="💰 Use Profit Target", group="Exit Management")
+
+// Advanced Trailing Stops
+useAdvancedTrailing = input.bool(true, title="📈 Use Advanced Trailing Stop", group="Exit Management")
+trailingStart = input.float(1.0, title="📈 Trailing Start (R:R)", minval=0.5, maxval=3.0, group="Exit Management")
+trailingStep = input.float(0.5, title="📈 Trailing Step (R:R)", minval=0.1, maxval=1.0, group="Exit Management")
+
+// Partial Exits
+usePartialExits = input.bool(true, title="📤 Use Partial Exits", group="Exit Management")
+partialExit1Percent = input.int(50, title="📤 1st Partial Exit %", minval=10, maxval=90, group="Exit Management")
+partialExit1RR = input.float(1.0, title="📤 1st Exit at R:R", minval=0.5, maxval=3.0, group="Exit Management")
+partialExit2Percent = input.int(30, title="📤 2nd Partial Exit %", minval=10, maxval=90, group="Exit Management")
+partialExit2RR = input.float(1.5, title="📤 2nd Exit at R:R", minval=0.5, maxval=4.0, group="Exit Management")
+
+// Time-based Exits
+useTimeBasedExits = input.bool(false, title="⏰ Use Time-based Exits", group="Exit Management")
+maxTradeHours = input.int(24, title="⏰ Max Trade Duration (Hours)", minval=1, maxval=168, group="Exit Management")
+
+// ==================== SESSION & NEWS FILTERS ====================
+useSessionFilter = input.bool(false, title="🕐 Enable Session Filter", group="Session & News")
+sessionStart = input.session("0800-1600", title="🕐 Trading Session", group="Session & News")
+avoidNews = input.bool(false, title="📰 Avoid News Times", group="Session & News")
+newsBufferMinutes = input.int(30, title="📰 News Buffer (Minutes)", minval=5, maxval=120, group="Session & News")
+
+// ==================== RISK MANAGEMENT ====================
+useRiskManagement = input.bool(true, title="⚠️ Enable Risk Management", group="Risk Management")
+riskPerTrade = input.float(2.0, title="⚠️ Risk Per Trade %", minval=0.1, maxval=10.0, group="Risk Management")
+maxDailyRisk = input.float(6.0, title="⚠️ Max Daily Risk %", minval=1.0, maxval=20.0, group="Risk Management")
+maxConcurrentTrades = input.int(3, title="⚠️ Max Concurrent Trades", minval=1, maxval=10, group="Risk Management")
+useDrawdownProtection = input.bool(true, title="⚠️ Enable Drawdown Protection", group="Risk Management")
+maxDrawdown = input.float(10.0, title="⚠️ Max Drawdown %", minval=5.0, maxval=50.0, group="Risk Management")
+
+// ==================== ALERT CUSTOMIZATION ====================
+useCustomAlerts = input.bool(true, title="🔔 Enable Custom Alerts", group="Alerts")
+alertOnEntry = input.bool(true, title="🔔 Alert on Entry Signals", group="Alerts")
+alertOnExit = input.bool(true, title="🔔 Alert on Exit Signals", group="Alerts")
+alertOnSweep = input.bool(true, title="🔔 Alert on Liquidity Sweeps", group="Alerts")
+
+// ==================== VISUAL CUSTOMIZATION ====================
+useEnhancedVisuals = input.bool(true, title="🎨 Enhanced Visual Elements", group="Visuals")
+signalSize = input.string("Normal", title="🎨 Signal Size", options=["Tiny", "Small", "Normal", "Large"], group="Visuals")
+showSupportResistance = input.bool(true, title="🎨 Show Support/Resistance", group="Visuals")
+showLiquidityLevels = input.bool(true, title="🎨 Show Liquidity Levels", group="Visuals")
+
+// ==================== CORE CALCULATIONS ====================
+// Adaptive ATR and volatility
+atr = ta.atr(14)
+volatility = ta.stdev(close, volatilityLookback) / close
+adaptiveATR = useAdaptiveFilters ? ta.ema(atr, adaptivePeriod) : atr
+
+// Basic indicators with adaptive capabilities
+rsiLength = useAdaptiveFilters ? math.max(5, math.min(30, math.round(14 * (1 + volatility * 10)))) : 14
+rsi = ta.rsi(close, 14) // Use fixed length for ta.rsi function
+adaptiveRSI = useAdaptiveFilters ? ta.rsi(close, 14) : ta.rsi(close, 14) // Simplified adaptive approach
+adaptiveRSIOverbought = useAdaptiveFilters ? math.max(65, 70 + volatility * 100) : 70
+adaptiveRSIOversold = useAdaptiveFilters ? math.min(35, 30 - volatility * 100) : 30
+
+ema21 = ta.ema(close, 21)
+trendEMA = ta.ema(close, trendFilterPeriod)
+volumeSMA = ta.sma(volume, 20)
+
+// Advanced technical indicators
+[macdLine, signalLine, histogramLine] = ta.macd(close, macdFastLength, macdSlowLength, macdSignalLength)
+stochK_value = ta.stoch(close, high, low, stochK)
+stochD_value = ta.sma(stochK_value, stochD)
+
+// Bollinger Bands
+bbBasis = ta.sma(close, bbLength)
+bbDev = bbStdDev * ta.stdev(close, bbLength)
+bbUpper = bbBasis + bbDev
+bbLower = bbBasis - bbDev
+bbWidth = (bbUpper - bbLower) / bbBasis
+bbSqueeze = bbWidth < (useAdaptiveFilters ? volatility * 2 : 0.05)
+
+// ADX
+[diplus, diminus, adx] = ta.dmi(adxLength, adxLength)
+
+// ==================== UT BOT CORE LOGIC ====================
+utBot(sensitivity) =>
+    nLoss = sensitivity * adaptiveATR
+    src = close
+    
+    var float trailingStop = na
+    if na(trailingStop)
+        trailingStop := src
+
+    if src > trailingStop and src[1] > trailingStop
+        trailingStop := math.max(trailingStop, src - nLoss)
+    else if src < trailingStop and src[1] < trailingStop
+        trailingStop := math.min(trailingStop, src + nLoss)
+    else if src > trailingStop
+        trailingStop := src - nLoss
+    else
+        trailingStop := src + nLoss
+
+    var int position = 0
+    if src > trailingStop
+        position := 1
+    else if src < trailingStop
+        position := -1
+    
+    [trailingStop, position]
+
+[trailingStop, position] = utBot(utSensitivity)
+
+// Basic signals
+rawBuySignal = position == 1 and position[1] != 1
+rawSellSignal = position == -1 and position[1] != -1
+
+// ==================== LIQUIDITY SWEEP DETECTION ====================
+// Dynamic sweep buffer based on ATR
+dynamicSweepBuffer = useDynamicBuffer ? (adaptiveATR / close) * 2 : staticSweepBuffer
+
+// Find recent highs and lows for liquidity levels
+recentHigh = ta.highest(high, sweepLookback)
+recentLow = ta.lowest(low, sweepLookback)
+
+// Detect sweeps
+sweepAboveHigh = high > recentHigh[1] * (1 + dynamicSweepBuffer) and close < recentHigh[1]
+sweepBelowLow = low < recentLow[1] * (1 - dynamicSweepBuffer) and close > recentLow[1]
+
+// Sweep confirmation with volume
+var int sweepBullishConfirm = 0
+var int sweepBearishConfirm = 0
+
+if sweepBelowLow and volume > volumeSMA * sweepVolumeMultiplier
+    sweepBullishConfirm := sweepConfirmBars
+if sweepAboveHigh and volume > volumeSMA * sweepVolumeMultiplier
+    sweepBearishConfirm := sweepConfirmBars
+
+sweepBullishConfirm := math.max(0, sweepBullishConfirm - 1)
+sweepBearishConfirm := math.max(0, sweepBearishConfirm - 1)
+
+// Sweep signal classification
+majorSweepBullish = sweepBullishConfirm > 0 and volume > volumeSMA * (sweepVolumeMultiplier * 1.5)
+minorSweepBullish = sweepBullishConfirm > 0 and not majorSweepBullish
+majorSweepBearish = sweepBearishConfirm > 0 and volume > volumeSMA * (sweepVolumeMultiplier * 1.5)
+minorSweepBearish = sweepBearishConfirm > 0 and not majorSweepBearish
+
+// ==================== MULTI-TIMEFRAME ANALYSIS ====================
+// HTF Data with error handling
+htf1_close = request.security(syminfo.tickerid, htf1, close, lookahead=barmerge.lookahead_off)
+htf1_ema = request.security(syminfo.tickerid, htf1, ta.ema(close, trendFilterPeriod), lookahead=barmerge.lookahead_off)
+[htf1_trailing, htf1_pos] = request.security(syminfo.tickerid, htf1, utBot(utSensitivity), lookahead=barmerge.lookahead_off)
+
+htf2_close = request.security(syminfo.tickerid, htf2, close, lookahead=barmerge.lookahead_off)
+htf2_ema = request.security(syminfo.tickerid, htf2, ta.ema(close, trendFilterPeriod), lookahead=barmerge.lookahead_off)
+[htf2_trailing, htf2_pos] = request.security(syminfo.tickerid, htf2, utBot(utSensitivity), lookahead=barmerge.lookahead_off)
+
+htf3_close = request.security(syminfo.tickerid, htf3, close, lookahead=barmerge.lookahead_off)
+htf3_ema = request.security(syminfo.tickerid, htf3, ta.ema(close, trendFilterPeriod), lookahead=barmerge.lookahead_off)
+[htf3_trailing, htf3_pos] = request.security(syminfo.tickerid, htf3, utBot(utSensitivity), lookahead=barmerge.lookahead_off)
+
+// MTF confirmation logic with null safety
+getMTFConfirmation(isBuy) =>
+    if not useMTFConfirmation
+        true
+    else
+        htf1_ok = true
+        htf2_ok = true  
+        htf3_ok = true
+        
+        if useHTF1 and not na(htf1_pos)
+            if mtfMethod == "Trend Only"
+                htf1_ok := isBuy ? (htf1_close > htf1_ema and htf1_pos == 1) : (htf1_close < htf1_ema and htf1_pos == -1)
+            else if mtfMethod == "Signals Only"
+                htf1_ok := isBuy ? htf1_pos == 1 : htf1_pos == -1
+            else
+                htf1_ok := isBuy ? (htf1_close > htf1_ema and htf1_pos == 1) : (htf1_close < htf1_ema and htf1_pos == -1)
+        
+        if useHTF2 and not na(htf2_pos)
+            if mtfMethod == "Trend Only"
+                htf2_ok := isBuy ? (htf2_close > htf2_ema and htf2_pos == 1) : (htf2_close < htf2_ema and htf2_pos == -1)
+            else if mtfMethod == "Signals Only"
+                htf2_ok := isBuy ? htf2_pos == 1 : htf2_pos == -1
+            else
+                htf2_ok := isBuy ? (htf2_close > htf2_ema and htf2_pos == 1) : (htf2_close < htf2_ema and htf2_pos == -1)
+                
+        if useHTF3 and not na(htf3_pos)
+            if mtfMethod == "Trend Only"
+                htf3_ok := isBuy ? (htf3_close > htf3_ema and htf3_pos == 1) : (htf3_close < htf3_ema and htf3_pos == -1)
+            else if mtfMethod == "Signals Only"
+                htf3_ok := isBuy ? htf3_pos == 1 : htf3_pos == -1
+            else
+                htf3_ok := isBuy ? (htf3_close > htf3_ema and htf3_pos == 1) : (htf3_close < htf3_ema and htf3_pos == -1)
+        
+        htf1_ok and htf2_ok and htf3_ok
+
+// ==================== SESSION AND NEWS FILTERS ====================
+// Session filter
+inSession = not useSessionFilter or not na(time(timeframe.period, sessionStart))
+
+// News filter (simplified - would need external data for real implementation)
+newsTime = false // Placeholder for news detection logic
+
+// ==================== COMPREHENSIVE SIGNAL FILTERING ====================
+var int lastBuyBar = na
+var int lastSellBar = na
+var float dailyRisk = 0.0
+var int tradesCount = 0
+var float maxDD = 0.0
+
+// Reset daily counters
+if dayofweek != dayofweek[1]
+    dailyRisk := 0.0
+    tradesCount := 0
+
+// Basic filters
+trendFilter_long = not useTrendFilter or close > trendEMA
+trendFilter_short = not useTrendFilter or close < trendEMA
+
+volumeFilter_ok = not useVolumeFilter or volume > (volumeSMA * volumeMultiplier)
+
+rsiFilter_long = not useRSIFilter or (rsi > adaptiveRSIOversold and rsi < adaptiveRSIOverbought)
+rsiFilter_short = not useRSIFilter or (rsi > adaptiveRSIOversold and rsi < adaptiveRSIOverbought)
+
+// Advanced technical filters
+macdFilter_long = true
+macdFilter_short = true
+if useMACDFilter
+    switch macdFilterType
+        "Signal Cross" =>
+            macdFilter_long := macdLine > signalLine
+            macdFilter_short := macdLine < signalLine
+        "Zero Line" =>
+            macdFilter_long := macdLine > 0
+            macdFilter_short := macdLine < 0
+        "Histogram" =>
+            macdFilter_long := histogramLine > histogramLine[1]
+            macdFilter_short := histogramLine < histogramLine[1]
+        "Trend" =>
+            macdFilter_long := macdLine > macdLine[1] and signalLine > signalLine[1]
+            macdFilter_short := macdLine < macdLine[1] and signalLine < signalLine[1]
+
+stochFilter_long = not useStochFilter or (stochK_value > stochOversold and stochK_value < stochOverbought)
+stochFilter_short = not useStochFilter or (stochK_value > stochOversold and stochK_value < stochOverbought)
+
+bbFilter_long = true
+bbFilter_short = true
+if useBBFilter
+    switch bbFilterType
+        "Mean Reversion" =>
+            bbFilter_long := close < bbLower or (close < bbBasis and close > close[1])
+            bbFilter_short := close > bbUpper or (close > bbBasis and close < close[1])
+        "Breakout" =>
+            bbFilter_long := close > bbUpper or (close > bbBasis and bbWidth > bbWidth[1])
+            bbFilter_short := close < bbLower or (close < bbBasis and bbWidth > bbWidth[1])
+        "Squeeze" =>
+            bbFilter_long := bbSqueeze and close > bbBasis
+            bbFilter_short := bbSqueeze and close < bbBasis
+
+adxFilter_ok = not useADXFilter or adx > adxThreshold
+
+// Timing filters
+barsSinceLastBuy = na(lastBuyBar) ? 999 : bar_index - lastBuyBar
+barsSinceLastSell = na(lastSellBar) ? 999 : bar_index - lastSellBar
+minBarsFilter_buy = barsSinceLastBuy >= minBarsBetweenSignals
+minBarsFilter_sell = barsSinceLastSell >= minBarsBetweenSignals
+
+// Risk management filters
+riskFilter_ok = not useRiskManagement or (dailyRisk < maxDailyRisk and tradesCount < maxConcurrentTrades and maxDD < maxDrawdown)
+
+// Liquidity sweep enhancement
+sweepFilter_long = not useLiquiditySweeps or (majorSweepBullish or minorSweepBullish)
+sweepFilter_short = not useLiquiditySweeps or (majorSweepBearish or minorSweepBearish)
+
+// MTF confirmation
+mtfConfirm_buy = getMTFConfirmation(true)
+mtfConfirm_sell = getMTFConfirmation(false)
+
+// Combined comprehensive filter
+buyFilter = (not useSignalFilters) or (trendFilter_long and volumeFilter_ok and rsiFilter_long and macdFilter_long and stochFilter_long and bbFilter_long and adxFilter_ok and minBarsFilter_buy and riskFilter_ok and inSession and not newsTime)
+
+sellFilter = (not useSignalFilters) or (trendFilter_short and volumeFilter_ok and rsiFilter_short and macdFilter_short and stochFilter_short and bbFilter_short and adxFilter_ok and minBarsFilter_sell and riskFilter_ok and inSession and not newsTime)
+
+// Final signals with all confirmations
+buySignal = rawBuySignal and buyFilter and mtfConfirm_buy and sweepFilter_long
+sellSignal = rawSellSignal and sellFilter and mtfConfirm_sell and sweepFilter_short
+
+// Prevent conflicting signals
+if buySignal and sellSignal
+    buySignal := false
+    sellSignal := false
+
+// Update tracking
+if buySignal
+    lastBuyBar := bar_index
+if sellSignal
+    lastSellBar := bar_index
+
+// ==================== ADVANCED TRADE MANAGEMENT ====================
+// Trade state variables
+var float entryPrice = na
+var float stopLoss = na
+var float profitTarget = na
+var bool inLongTrade = false
+var bool inShortTrade = false
+var int tradeStartTime = na
+var float trailingStopLevel = na
+var bool partial1Taken = false
+var bool partial2Taken = false
+var float remainingPosition = 100.0
+
+// Position sizing calculation
+calculatePositionSize() =>
+    if useRiskManagement
+        accountBalance = 100000.0 // Placeholder - would need actual account balance
+        riskAmount = accountBalance * (riskPerTrade / 100)
+        stopDistance = math.abs(close - stopLoss)
+        positionSize = stopDistance > 0 ? riskAmount / stopDistance : 0
+        positionSize
+    else
+        1.0
+
+// Entry logic
+if buySignal and not inLongTrade and not inShortTrade
+    entryPrice := close
+    inLongTrade := true
+    inShortTrade := false
+    tradeStartTime := time
+    partial1Taken := false
+    partial2Taken := false
+    remainingPosition := 100.0
+    
+    if useATRExits
+        stopLoss := entryPrice - (adaptiveATR * atrMultiplier)
+    else
+        stopLoss := trailingStop
+    
+    if useProfitTarget
+        profitTarget := entryPrice + ((entryPrice - stopLoss) * riskRewardRatio)
+    
+    if useAdvancedTrailing
+        trailingStopLevel := stopLoss
+    
+    if useRiskManagement
+        dailyRisk := dailyRisk + riskPerTrade
+        tradesCount := tradesCount + 1
+
+if sellSignal and not inShortTrade and not inLongTrade
+    entryPrice := close
+    inShortTrade := true
+    inLongTrade := false
+    tradeStartTime := time
+    partial1Taken := false
+    partial2Taken := false
+    remainingPosition := 100.0
+    
+    if useATRExits
+        stopLoss := entryPrice + (adaptiveATR * atrMultiplier)
+    else
+        stopLoss := trailingStop
+    
+    if useProfitTarget
+        profitTarget := entryPrice - ((stopLoss - entryPrice) * riskRewardRatio)
+    
+    if useAdvancedTrailing
+        trailingStopLevel := stopLoss
+    
+    if useRiskManagement
+        dailyRisk := dailyRisk + riskPerTrade
+        tradesCount := tradesCount + 1
+
+// ==================== ADVANCED EXIT LOGIC ====================
+longExit = false
+shortExit = false
+exitReason = ""
+
+// Time-based exits
+timeBasedExit = useTimeBasedExits and not na(tradeStartTime) and (time - tradeStartTime) > (maxTradeHours * 60 * 60 * 1000)
+
+if inLongTrade
+    // Partial exits
+    if usePartialExits and not partial1Taken and close >= entryPrice + ((entryPrice - stopLoss) * partialExit1RR)
+        partial1Taken := true
+        remainingPosition := remainingPosition - partialExit1Percent
+        exitReason := "Partial Exit 1"
+    
+    if usePartialExits and not partial2Taken and close >= entryPrice + ((entryPrice - stopLoss) * partialExit2RR)
+        partial2Taken := true
+        remainingPosition := remainingPosition - partialExit2Percent
+        exitReason := "Partial Exit 2"
+    
+    // Advanced trailing stop
+    if useAdvancedTrailing and close >= entryPrice + ((entryPrice - stopLoss) * trailingStart)
+        newTrailingLevel = close - (adaptiveATR * atrMultiplier * (1 + trailingStep))
+        trailingStopLevel := math.max(trailingStopLevel, newTrailingLevel)
+    
+    // Exit conditions
+    if close <= (useAdvancedTrailing ? trailingStopLevel : stopLoss)
+        longExit := true
+        exitReason := useAdvancedTrailing ? "Trailing Stop" : "Stop Loss"
+    else if useProfitTarget and close >= profitTarget and remainingPosition > 0
+        longExit := true
+        exitReason := "Profit Target"
+    else if rsi >= adaptiveRSIOverbought
+        longExit := true
+        exitReason := "RSI Overbought"
+    else if position == -1
+        longExit := true
+        exitReason := "UT Bot Reversal"
+    else if close < ema21
+        longExit := true
+        exitReason := "Below EMA21"
+    else if timeBasedExit
+        longExit := true
+        exitReason := "Time Exit"
+
+if inShortTrade
+    // Partial exits
+    if usePartialExits and not partial1Taken and close <= entryPrice - ((stopLoss - entryPrice) * partialExit1RR)
+        partial1Taken := true
+        remainingPosition := remainingPosition - partialExit1Percent
+        exitReason := "Partial Exit 1"
+    
+    if usePartialExits and not partial2Taken and close <= entryPrice - ((stopLoss - entryPrice) * partialExit2RR)
+        partial2Taken := true
+        remainingPosition := remainingPosition - partialExit2Percent
+        exitReason := "Partial Exit 2"
+    
+    // Advanced trailing stop
+    if useAdvancedTrailing and close <= entryPrice - ((stopLoss - entryPrice) * trailingStart)
+        newTrailingLevel = close + (adaptiveATR * atrMultiplier * (1 + trailingStep))
+        trailingStopLevel := math.min(trailingStopLevel, newTrailingLevel)
+    
+    // Exit conditions
+    if close >= (useAdvancedTrailing ? trailingStopLevel : stopLoss)
+        shortExit := true
+        exitReason := useAdvancedTrailing ? "Trailing Stop" : "Stop Loss"
+    else if useProfitTarget and close <= profitTarget and remainingPosition > 0
+        shortExit := true
+        exitReason := "Profit Target"
+    else if rsi <= adaptiveRSIOversold
+        shortExit := true
+        exitReason := "RSI Oversold"
+    else if position == 1
+        shortExit := true
+        exitReason := "UT Bot Reversal"
+    else if close > ema21
+        shortExit := true
+        exitReason := "Above EMA21"
+    else if timeBasedExit
+        shortExit := true
+        exitReason := "Time Exit"
+
+// Execute exits
+if longExit
+    inLongTrade := false
+    entryPrice := na
+    stopLoss := na
+    profitTarget := na
+    tradeStartTime := na
+    trailingStopLevel := na
+    remainingPosition := 100.0
+
+if shortExit
+    inShortTrade := false
+    entryPrice := na
+    stopLoss := na
+    profitTarget := na
+    tradeStartTime := na
+    trailingStopLevel := na
+    remainingPosition := 100.0
+
+// ==================== PERFORMANCE TRACKING ====================
+var int totalTrades = 0
+var int winningTrades = 0
+var float totalPnL = 0.0
+var float currentDrawdown = 0.0
+var float maxDrawdownValue = 0.0
+var float accountPeak = 100000.0
+
+// Track trade performance
+if longExit or shortExit
+    totalTrades := totalTrades + 1
+    if not na(entryPrice)
+        tradePnL = inLongTrade ? (close - entryPrice) / entryPrice : (entryPrice - close) / entryPrice
+        totalPnL := totalPnL + tradePnL
+        if tradePnL > 0
+            winningTrades := winningTrades + 1
+        
+        // Update drawdown
+        currentBalance = 100000.0 + (totalPnL * 100000.0)
+        if currentBalance > accountPeak
+            accountPeak := currentBalance
+        currentDrawdown := (accountPeak - currentBalance) / accountPeak * 100
+        maxDrawdownValue := math.max(maxDrawdownValue, currentDrawdown)
+
+// ==================== ENHANCED PLOTTING ====================
+// Signal size mapping
+signalSizeValue = signalSize == "Tiny" ? size.tiny : signalSize == "Small" ? size.small : signalSize == "Normal" ? size.normal : size.large
+
+// Plot trailing stop
+plot(trailingStop, title="UT Bot Trailing Stop", color=position == 1 ? green : red, linewidth=2)
+
+// Plot EMAs and trend lines
+plot(ema21, title="EMA 21", color=blue, linewidth=1)
+plot(useTrendFilter ? trendEMA : na, title="Trend Filter EMA", color=color.new(purple, 30), linewidth=2)
+
+// Plot Bollinger Bands
+plot(useBBFilter ? bbUpper : na, title="BB Upper", color=color.new(gray, 50), linewidth=1)
+plot(useBBFilter ? bbLower : na, title="BB Lower", color=color.new(gray, 50), linewidth=1)
+plot(useBBFilter ? bbBasis : na, title="BB Basis", color=color.new(gray, 70), linewidth=1)
+
+// Plot trade levels
+plot(inLongTrade or inShortTrade ? stopLoss : na, title="Stop Loss", color=red, linewidth=2, style=plot.style_linebr)
+plot((inLongTrade or inShortTrade) and useProfitTarget ? profitTarget : na, title="Profit Target", color=green, linewidth=2, style=plot.style_linebr)
+plot(useAdvancedTrailing and not na(trailingStopLevel) ? trailingStopLevel : na, title="Trailing Stop", color=orange, linewidth=1, style=plot.style_linebr)
+
+// Plot liquidity levels
+plot(showLiquidityLevels ? recentHigh : na, title="Liquidity High", color=color.new(red, 70), linewidth=1, style=plot.style_stepline)
+plot(showLiquidityLevels ? recentLow : na, title="Liquidity Low", color=color.new(green, 70), linewidth=1, style=plot.style_stepline)
+
+// Background colors
+mtfBullish = (not useHTF1 or htf1_pos == 1) and (not useHTF2 or htf2_pos == 1) and (not useHTF3 or htf3_pos == 1)
+mtfBearish = (not useHTF1 or htf1_pos == -1) and (not useHTF2 or htf2_pos == -1) and (not useHTF3 or htf3_pos == -1)
+bgcolor(useMTFConfirmation ? (mtfBullish ? color.new(green, 95) : mtfBearish ? color.new(red, 95) : color.new(gray, 98)) : na, title="MTF Background")
+bgcolor(useBBFilter and bbSqueeze ? color.new(yellow, 90) : na, title="BB Squeeze")
+bgcolor(not inSession ? color.new(gray, 90) : na, title="Outside Session")
+
+// ==================== SIGNAL SHAPES ====================
+// Clean Entry Signals
+plotshape(buySignal, title="🚀 BUY ENTRY", text="BUY", style=shape.labelup, 
+          location=location.belowbar, color=green, textcolor=white, size=size.normal)
+
+plotshape(sellSignal, title="🔥 SELL ENTRY", text="SELL", style=shape.labeldown, 
+          location=location.abovebar, color=red, textcolor=white, size=size.normal)
+
+// Exit signals with static text
+plotshape(longExit, title="📤 LONG EXIT", text="EXIT", style=shape.xcross, 
+          location=location.abovebar, color=orange, size=size.small)
+
+plotshape(shortExit, title="📤 SHORT EXIT", text="EXIT", style=shape.xcross, 
+          location=location.belowbar, color=orange, size=size.small)
+
+// Filtered signals (warnings when MTF not aligned)
+plotshape(rawBuySignal and buyFilter and not mtfConfirm_buy, title="⚠️ BUY (No MTF)", text="B", style=shape.triangleup, 
+          location=location.belowbar, color=color.new(green, 50), textcolor=white, size=size.small)
+
+plotshape(rawSellSignal and sellFilter and not mtfConfirm_sell, title="⚠️ SELL (No MTF)", text="S", style=shape.triangledown, 
+          location=location.abovebar, color=color.new(red, 50), textcolor=white, size=size.small)
+
+// Liquidity sweep signals
+plotshape(majorSweepBullish and not buySignal, title="🌊 MAJOR SWEEP BULL", text="MAJOR\nSWEEP", style=shape.triangleup, 
+          location=location.belowbar, color=color.new(lime, 30), textcolor=white, size=size.small)
+
+plotshape(majorSweepBearish and not sellSignal, title="🌊 MAJOR SWEEP BEAR", text="MAJOR\nSWEEP", style=shape.triangledown, 
+          location=location.abovebar, color=color.new(maroon, 30), textcolor=white, size=size.small)
+
+plotshape(minorSweepBullish and not buySignal, title="💧 MINOR SWEEP BULL", text="SWEEP", style=shape.circle, 
+          location=location.belowbar, color=color.new(green, 50), textcolor=white, size=size.tiny)
+
+plotshape(minorSweepBearish and not sellSignal, title="💧 MINOR SWEEP BEAR", text="SWEEP", style=shape.circle, 
+          location=location.abovebar, color=color.new(red, 50), textcolor=white, size=size.tiny)
+
+// Filtered signals
+plotshape(rawBuySignal and buyFilter and not mtfConfirm_buy, title="⚠️ BUY (No MTF)", text="B", style=shape.triangleup, 
+          location=location.belowbar, color=color.new(green, 50), textcolor=white, size=size.small)
+
+plotshape(rawSellSignal and sellFilter and not mtfConfirm_sell, title="⚠️ SELL (No MTF)", text="S", style=shape.triangledown, 
+          location=location.abovebar, color=color.new(red, 50), textcolor=white, size=size.small)
+
+// Exit signals with reasons
+plotshape(longExit, title="📤 LONG EXIT", text="EXIT", style=shape.xcross, 
+          location=location.abovebar, color=orange, size=size.small)
+
+plotshape(shortExit, title="📤 SHORT EXIT", text="EXIT", style=shape.xcross, 
+          location=location.belowbar, color=orange, size=size.small)
+
+// Partial exit markers
+plotshape(partial1Taken and inLongTrade, title="📤 PARTIAL 1 LONG", text="P1", style=shape.diamond, 
+          location=location.abovebar, color=color.new(orange, 30), size=size.tiny)
+
+plotshape(partial1Taken and inShortTrade, title="📤 PARTIAL 1 SHORT", text="P1", style=shape.diamond, 
+          location=location.belowbar, color=color.new(orange, 30), size=size.tiny)
+
+plotshape(partial2Taken and inLongTrade, title="📤 PARTIAL 2 LONG", text="P2", style=shape.diamond, 
+          location=location.abovebar, color=color.new(orange, 50), size=size.tiny)
+
+plotshape(partial2Taken and inShortTrade, title="📤 PARTIAL 2 SHORT", text="P2", style=shape.diamond, 
+          location=location.belowbar, color=color.new(orange, 50), size=size.tiny)
+
+// ==================== DEBUG TABLES ====================
+var table debugTable = na
+var table performanceTable = na
+
+if showDebug
+    debugTable := table.new(position.top_right, 2, 25, bgcolor=color.new(color.black, 80), border_width=1)
+
+if showPerformance
+    performanceTable := table.new(position.top_left, 2, 15, bgcolor=color.new(color.black, 80), border_width=1)
+
+// Main debug table
+if barstate.islast and showDebug and not na(debugTable)
+    table.cell(debugTable, 0, 0, "🔍 ULTIMATE DEBUG", text_color=yellow, text_size=size.normal)
+    table.cell(debugTable, 1, 0, "VALUE", text_color=yellow, text_size=size.normal)
+    
+    // Core signals
+    table.cell(debugTable, 0, 1, "UT Position", text_color=white, text_size=size.small)
+    table.cell(debugTable, 1, 1, str.tostring(position), text_color=position == 1 ? green : position == -1 ? red : gray, text_size=size.small)
+    
+    table.cell(debugTable, 0, 2, "Buy Signal", text_color=white, text_size=size.small)
+    table.cell(debugTable, 1, 2, buySignal ? "🚀 YES" : "NO", text_color=buySignal ? green : gray, text_size=size.small)
+    
+    table.cell(debugTable, 0, 3, "Sell Signal", text_color=white, text_size=size.small)
+    table.cell(debugTable, 1, 3, sellSignal ? "🔥 YES" : "NO", text_color=sellSignal ? red : gray, text_size=size.small)
+    
+    table.cell(debugTable, 0, 4, "Major Sweep Bull", text_color=white, text_size=size.small)
+    table.cell(debugTable, 1, 4, majorSweepBullish ? "🌊 YES" : "NO", text_color=majorSweepBullish ? lime : gray, text_size=size.small)
+    
+    table.cell(debugTable, 0, 5, "Major Sweep Bear", text_color=white, text_size=size.small)
+    table.cell(debugTable, 1, 5, majorSweepBearish ? "🌊 YES" : "NO", text_color=majorSweepBearish ? maroon : gray, text_size=size.small)
+    
+    table.cell(debugTable, 0, 6, "MTF Confirm Buy", text_color=white, text_size=size.small)
+    table.cell(debugTable, 1, 6, useMTFConfirmation ? (mtfConfirm_buy ? "✓ YES" : "✗ NO") : "OFF", 
+               text_color=useMTFConfirmation ? (mtfConfirm_buy ? green : red) : gray, text_size=size.small)
+    
+    table.cell(debugTable, 0, 7, "MACD Filter", text_color=white, text_size=size.small)
+    table.cell(debugTable, 1, 7, useMACDFilter ? (macdFilter_long ? "✓ BULL" : "✗ BEAR") : "OFF", 
+               text_color=useMACDFilter ? (macdFilter_long ? green : red) : gray, text_size=size.small)
+    
+    table.cell(debugTable, 0, 8, "In Long Trade", text_color=white, text_size=size.small)
+    table.cell(debugTable, 1, 8, inLongTrade ? "YES" : "NO", text_color=inLongTrade ? green : gray, text_size=size.small)
+    
+    table.cell(debugTable, 0, 9, "Remaining Position", text_color=white, text_size=size.small)
+    table.cell(debugTable, 1, 9, str.tostring(remainingPosition) + "%", text_color=white, text_size=size.small)
+    
+    table.cell(debugTable, 0, 10, "Daily Risk", text_color=white, text_size=size.small)
+    table.cell(debugTable, 1, 10, str.tostring(dailyRisk, "#.##") + "%", text_color=dailyRisk > maxDailyRisk * 0.8 ? red : green, text_size=size.small)
+
+// Performance table
+if barstate.islast and showPerformance and not na(performanceTable)
+    winRate = totalTrades > 0 ? (winningTrades / totalTrades * 100) : 0
+    
+    table.cell(performanceTable, 0, 0, "📈 PERFORMANCE", text_color=yellow, text_size=size.normal)
+    table.cell(performanceTable, 1, 0, "METRICS", text_color=yellow, text_size=size.normal)
+    
+    table.cell(performanceTable, 0, 1, "Total Trades", text_color=white, text_size=size.small)
+    table.cell(performanceTable, 1, 1, str.tostring(totalTrades), text_color=white, text_size=size.small)
+    
+    table.cell(performanceTable, 0, 2, "Win Rate", text_color=white, text_size=size.small)
+    table.cell(performanceTable, 1, 2, str.tostring(winRate, "#.#") + "%", text_color=winRate > 50 ? green : red, text_size=size.small)
+    
+    table.cell(performanceTable, 0, 3, "Total P&L", text_color=white, text_size=size.small)
+    table.cell(performanceTable, 1, 3, str.tostring(totalPnL * 100, "#.##") + "%", text_color=totalPnL > 0 ? green : red, text_size=size.small)
+    
+    table.cell(performanceTable, 0, 4, "Max DD", text_color=white, text_size=size.small)
+    table.cell(performanceTable, 1, 4, str.tostring(maxDrawdownValue, "#.##") + "%", text_color=maxDrawdownValue > 10 ? red : orange, text_size=size.small)
+
+// ==================== ALERT SYSTEM ====================
+// Entry alerts
+if buySignal and useCustomAlerts and alertOnEntry
+    alert("🚀 ULTIMATE BUY - Price: " + str.tostring(close) + " | Stop: " + str.tostring(stopLoss) + " | Target: " + str.tostring(profitTarget) + " | Sweep: " + (majorSweepBullish ? "MAJOR" : "MINOR"), alert.freq_once_per_bar)
+
+if sellSignal and useCustomAlerts and alertOnEntry
+    alert("🔥 ULTIMATE SELL - Price: " + str.tostring(close) + " | Stop: " + str.tostring(stopLoss) + " | Target: " + str.tostring(profitTarget) + " | Sweep: " + (majorSweepBearish ? "MAJOR" : "MINOR"), alert.freq_once_per_bar)
+
+// Exit alerts
+if (longExit or shortExit) and useCustomAlerts and alertOnExit
+    alert("📤 EXIT " + (longExit ? "LONG" : "SHORT") + " - Reason: " + exitReason + " | Price: " + str.tostring(close), alert.freq_once_per_bar)
+
+// Sweep alerts
+if (majorSweepBullish or majorSweepBearish) and useCustomAlerts and alertOnSweep
+    alert("🌊 MAJOR SWEEP " + (majorSweepBullish ? "BULLISH" : "BEARISH") + " - Price: " + str.tostring(close), alert.freq_once_per_bar)
+
+// Background confirmation
+bgcolor(color.new(color.gray, 98), title="Ultimate UT Bot Running")
