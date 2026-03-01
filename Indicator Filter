@@ -1,0 +1,47 @@
+//@version=5
+strategy("High Accuracy RSI + ADX + EMA Strategy", overlay=true, default_qty_type=strategy.percent_of_equity, default_qty_value=100)
+
+// === INPUTS ===
+rsiPeriod = input.int(14, "RSI Period")
+rsiBuyLevel = input.int(30, "RSI Buy Level (Oversold)")
+takeProfitRR = input.float(2.0, "Risk-Reward Ratio", minval=0.5)
+stopLossPerc = input.float(1.0, "Stop Loss %", minval=0.1)
+adxPeriod = input.int(14, "ADX Period")
+adxThreshold = input.float(20, "ADX Strength Threshold", minval=5)
+
+// === INDICATORS ===
+rsi = ta.rsi(close, rsiPeriod)
+ema200 = ta.ema(close, 200)
+
+// === ADX Calculation ===
+upMove   = ta.change(high)
+downMove = -ta.change(low)
+plusDM   = (upMove > downMove and upMove > 0) ? upMove : 0
+minusDM  = (downMove > upMove and downMove > 0) ? downMove : 0
+trur     = ta.rma(ta.tr, adxPeriod)
+plusDI   = 100 * ta.rma(plusDM, adxPeriod) / trur
+minusDI  = 100 * ta.rma(minusDM, adxPeriod) / trur
+dx       = 100 * math.abs(plusDI - minusDI) / (plusDI + minusDI)
+adx      = ta.rma(dx, adxPeriod)
+
+// === FILTERS ===
+trendUp = close > ema200
+strongTrend = adx > adxThreshold
+
+// === ENTRY CONDITION ===
+buySignal = ta.crossover(rsiBuyLevel, rsi) and trendUp and strongTrend
+
+// === RISK MANAGEMENT ===
+longSL = close * (1 - stopLossPerc / 100)
+longTP = close * (1 + (stopLossPerc * takeProfitRR) / 100)
+
+// === STRATEGY EXECUTION ===
+if buySignal
+    strategy.entry("Buy", strategy.long)
+    strategy.exit("TP/SL", from_entry="Buy", stop=longSL, limit=longTP)
+
+// === PLOTS ===
+plot(ema200, title="EMA 200", color=color.orange)
+hline(rsiBuyLevel, "RSI Buy Level", color=color.red)
+plot(adx, title="ADX", color=color.blue)
+50% treading automation
